@@ -1,0 +1,462 @@
+{% extends 'chatbot/base.html' %}
+
+{% block title %}Home - Mental Wellness{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Welcome Section -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h2 class="card-title mb-3">Welcome to Your Mental Wellness Journey</h2>
+                <p class="card-text lead">Track your mood, journal your thoughts, and chat with our supportive AI companion.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="fas fa-smile me-2"></i>Track Your Mood
+            </div>
+            <div class="card-body">
+                <p class="card-text">Record how you're feeling and track your emotional journey over time.</p>
+                <a href="{% url 'add_mood' %}" class="btn btn-primary w-100 mb-3">
+                    <i class="fas fa-plus me-2"></i>Add Mood Entry
+                </a>
+                
+                {% if recent_moods %}
+                <div class="mood-analytics">
+                    <h6 class="mb-3">Mood Analytics</h6>
+                    <div class="mood-stats mb-3">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <div class="stat-card bg-light rounded p-2">
+                                    <small class="text-muted d-block">Most Common Mood</small>
+                                    <span class="h6 mb-0">{{ most_common_mood }}</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-card bg-light rounded p-2">
+                                    <small class="text-muted d-block">Average Mood</small>
+                                    <span class="h6 mb-0">{{ average_mood }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mood-chart-container">
+                        <canvas id="moodChart"></canvas>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center text-muted">
+                    <i class="fas fa-chart-line fa-2x mb-2"></i>
+                    <p>Start tracking your mood to see analytics</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="fas fa-book me-2"></i>Journal Your Thoughts
+            </div>
+            <div class="card-body">
+                <p class="card-text">Express yourself through writing and reflect on your experiences.</p>
+                <a href="{% url 'add_journal' %}" class="btn btn-primary w-100">
+                    <i class="fas fa-plus me-2"></i>New Journal Entry
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="fas fa-robot me-2"></i>Chat with AI
+            </div>
+            <div class="card-body">
+                <p class="card-text">Have a conversation with our supportive AI companion.</p>
+                <button onclick="openChatWindow()" class="btn btn-primary w-100">
+                    <i class="fas fa-comments me-2"></i>Start Chat
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Entries -->
+    {% if recent_moods %}
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="fas fa-chart-line me-2"></i>Recent Moods
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for mood in recent_moods %}
+                    <div class="list-group-item border-0 mb-2 bg-light rounded">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ mood.mood }}</h6>
+                                <small class="text-muted">{{ mood.created_at|date:"F j, Y" }}</small>
+                            </div>
+                            {% if mood.notes %}
+                            <p class="mb-1">{{ mood.notes }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if recent_journals %}
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="fas fa-book-open me-2"></i>Recent Journal Entries
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for journal in recent_journals %}
+                    <div class="list-group-item border-0 mb-2 bg-light rounded">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ journal.title }}</h6>
+                                <small class="text-muted">{{ journal.created_at|date:"F j, Y" }}</small>
+                            </div>
+                        </div>
+                        <p class="mb-1">{{ journal.content|truncatewords:30 }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Self-Care Suggestions -->
+    {% if recent_suggestions %}
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-heart me-2"></i>Personalized Self-Care Suggestions
+                </div>
+                <button class="btn btn-sm btn-outline-primary" onclick="refreshSuggestions()">
+                    <i class="fas fa-sync-alt me-2"></i>Get New Suggestions
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for suggestion in recent_suggestions %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100 suggestion-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <span class="badge bg-primary">{{ suggestion.get_category_display }}</span>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a class="dropdown-item complete-suggestion" href="#" 
+                                                   onclick="completeSuggestion({{ suggestion.id }})">
+                                                    <i class="fas fa-check me-2"></i>Mark as Completed
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="#" 
+                                                   onclick="saveForLater({{ suggestion.id }})">
+                                                    <i class="fas fa-bookmark me-2"></i>Save for Later
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <h6 class="card-title mb-3">{{ suggestion.suggestion }}</h6>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ suggestion.duration }}
+                                    </small>
+                                    <small class="text-muted">
+                                        <i class="fas fa-heart me-1"></i>
+                                        Based on your {{ suggestion.get_sentiment_display }} mood
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Mood Insights -->
+    {% if mood_insights %}
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-lightbulb me-2"></i>Mood Insights
+            </div>
+            <div class="card-body">
+                <p class="card-text">{{ mood_insights }}</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Chat Window -->
+{% if user.is_authenticated %}
+<div class="chat-window" id="chatWindow" style="display: none;">
+    <div class="chat-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-robot me-2"></i>Chat with AI</h5>
+        <button type="button" class="btn-close btn-close-white" onclick="closeChatWindow()"></button>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+        <div class="message bot-message">
+            Hello! I'm here to listen and support you. How are you feeling today?
+        </div>
+    </div>
+    <div class="chat-input p-3">
+        <form id="chatForm" onsubmit="sendMessage(event)">
+            <div class="input-group">
+                <input type="text" id="messageInput" class="form-control" placeholder="Type your message..." required>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function openChatWindow() {
+    const chatWindow = document.getElementById('chatWindow');
+    chatWindow.style.display = 'block';
+    // Scroll to chat window with smooth animation
+    chatWindow.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function closeChatWindow() {
+    document.getElementById('chatWindow').style.display = 'none';
+}
+
+function addMessage(message, isUser = false) {
+    const chatMessages = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+    messageDiv.textContent = message;
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function sendMessage(event) {
+    event.preventDefault();
+    const input = document.getElementById('messageInput');
+    const message = input.value.trim();
+    
+    if (message) {
+        addMessage(message, true);
+        input.value = '';
+        
+        fetch('/chat/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ message: message })
+        })
+        .then(response => response.json())
+        .then(data => {
+            addMessage(data.response);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            addMessage('I apologize, but I\'m having trouble responding right now. Please try again.');
+        });
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+{% if recent_moods %}
+// Mood Chart Configuration
+const moodData = {
+    labels: {{ mood_dates|safe }},
+    datasets: [{
+        label: 'Mood Level',
+        data: {{ mood_values|safe }},
+        borderColor: '#6e8efb',
+        backgroundColor: 'rgba(110, 142, 251, 0.1)',
+        tension: 0.4,
+        fill: true
+    }]
+};
+
+const moodConfig = {
+    type: 'line',
+    data: moodData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                mode: 'index',
+                intersect: false,
+                callbacks: {
+                    label: function(context) {
+                        const moods = {{ mood_labels|safe }};
+                        return `Mood: ${moods[context.dataIndex]}`;
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 5,
+                ticks: {
+                    stepSize: 1,
+                    callback: function(value) {
+                        const moods = ['Very Sad', 'Sad', 'Neutral', 'Happy', 'Very Happy'];
+                        return moods[value - 1] || '';
+                    }
+                }
+            },
+            x: {
+                grid: {
+                    display: false
+                }
+            }
+        }
+    }
+};
+
+// Initialize the chart
+const moodChart = new Chart(
+    document.getElementById('moodChart'),
+    moodConfig
+);
+{% endif %}
+
+function refreshSuggestions() {
+    fetch('/refresh-suggestions/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        } else {
+            alert('Error refreshing suggestions. Please try again.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error refreshing suggestions. Please try again.');
+    });
+}
+
+function completeSuggestion(suggestionId) {
+    fetch(`/complete-suggestion/${suggestionId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            const suggestionCard = document.querySelector(`[data-suggestion-id="${suggestionId}"]`).closest('.suggestion-card');
+            suggestionCard.style.opacity = '0.5';
+            suggestionCard.style.pointerEvents = 'none';
+        } else {
+            alert('Error completing suggestion. Please try again.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error completing suggestion. Please try again.');
+    });
+}
+
+function saveForLater(suggestionId) {
+    fetch(`/save-suggestion/${suggestionId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Suggestion saved for later!');
+        } else {
+            alert('Error saving suggestion. Please try again.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error saving suggestion. Please try again.');
+    });
+}
+</script>
+
+<style>
+.suggestion-card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.suggestion-card:hover {
+    transform: translateY(-5px);
+}
+
+.complete-suggestion {
+    opacity: 0.7;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.complete-suggestion:hover {
+    opacity: 1;
+}
+</style>
+{% endblock %} 

@@ -1,0 +1,166 @@
+{% extends 'chatbot/base.html' %}
+{% load form_tags %}
+
+{% block title %}Wellness Goals - Mental Wellness{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Goal Creation Form -->
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-bullseye me-2"></i>Set New Goal
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {% for field in form %}
+                    <div class="mb-3">
+                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                        {{ field.errors }}
+                        {{ field|add_class:"form-control" }}
+                        {% if field.help_text %}
+                        <small class="form-text text-muted">{{ field.help_text }}</small>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Create Goal
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Goals -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="fas fa-tasks me-2"></i>Active Goals
+            </div>
+            <div class="card-body">
+                {% if active_goals %}
+                <div class="list-group">
+                    {% for goal in active_goals %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">
+                                    {% if goal.goal_type == 'custom' %}
+                                    {{ goal.custom_goal }}
+                                    {% else %}
+                                    {{ goal.get_goal_type_display }}
+                                    {% endif %}
+                                </h5>
+                                <p class="mb-1">Target: {{ goal.target }}</p>
+                                <small class="text-muted">
+                                    Frequency: {{ goal.get_frequency_display }}
+                                    {% if goal.streak_count > 0 %}
+                                    | Streak: {{ goal.streak_count }} days
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="btn-group">
+                                <a href="{% url 'update_goal_progress' goal.id %}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-check me-1"></i>Update Progress
+                                </a>
+                                <a href="{% url 'toggle_goal_status' goal.id %}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-check-double me-1"></i>Complete
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center">No active goals. Set your first goal to get started!</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Completed Goals -->
+        {% if completed_goals %}
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-check-circle me-2"></i>Completed Goals
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for goal in completed_goals %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <div>
+                                <h5 class="mb-1">
+                                    {% if goal.goal_type == 'custom' %}
+                                    {{ goal.custom_goal }}
+                                    {% else %}
+                                    {{ goal.get_goal_type_display }}
+                                    {% endif %}
+                                </h5>
+                                <p class="mb-1">Target: {{ goal.target }}</p>
+                                <small class="text-muted">
+                                    Completed on: {{ goal.last_check_in|date:"M d, Y" }}
+                                </small>
+                            </div>
+                            <a href="{% url 'toggle_goal_status' goal.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-redo me-1"></i>Reactivate
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- AI Check-in Modal -->
+<div class="modal fade" id="checkInModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Daily Check-in</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="checkInContent">
+                <!-- Check-in messages will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Check for daily check-ins
+    function checkForDailyCheckIns() {
+        fetch('/get-goal-check-ins/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.check_ins && data.check_ins.length > 0) {
+                    const modal = new bootstrap.Modal(document.getElementById('checkInModal'));
+                    const content = document.getElementById('checkInContent');
+                    content.innerHTML = data.check_ins.map(checkIn => `
+                        <div class="alert alert-info mb-2">
+                            <i class="fas fa-bell me-2"></i>${checkIn.message}
+                        </div>
+                    `).join('');
+                    modal.show();
+                }
+            });
+    }
+
+    // Check for check-ins when page loads
+    checkForDailyCheckIns();
+
+    // Set up interval to check for check-ins every hour
+    setInterval(checkForDailyCheckIns, 3600000);
+});
+</script>
+{% endblock %} 

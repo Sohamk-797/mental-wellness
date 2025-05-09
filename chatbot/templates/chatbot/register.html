@@ -1,0 +1,85 @@
+{% extends 'chatbot/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Register - Mental Wellness{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="mb-0"><i class="fas fa-user-plus me-2"></i>Create Account</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-user-plus me-2"></i>Register
+                        </button>
+                    </div>
+                </form>
+                <div class="text-center mt-3">
+                    <p class="mb-0">Already have an account? <a href="{% url 'login' %}" class="text-decoration-none">Login here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    background: var(--secondary-gradient);
+    color: white;
+    border-radius: 15px 15px 0 0 !important;
+    padding: 1.5rem;
+}
+
+.form-control {
+    border-radius: 10px;
+    padding: 0.8rem 1.2rem;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #6e8efb;
+    box-shadow: 0 0 0 0.2rem rgba(110, 142, 251, 0.25);
+}
+
+.btn-primary {
+    background: var(--accent-gradient);
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 25px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.help-text {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.errorlist {
+    color: #dc3545;
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 1rem;
+}
+</style>
+{% endblock %} 
