@@ -2,8 +2,7 @@ services:
   - type: web
     name: mental-wellness
     env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn mental_wellness.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
+    startCommand: ./start.sh
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
