@@ -2,10 +2,10 @@ services:
   - type: web
     name: mental-wellness
     env: python
-    startCommand: ./start.sh
+    startCommand: gunicorn mental_wellness.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.0
+        value: 3.11.11
       - key: DJANGO_SECRET_KEY
         sync: false
       - key: DJANGO_DEBUG
