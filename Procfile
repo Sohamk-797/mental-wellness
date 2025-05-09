@@ -1,0 +1,1 @@
+web: gunicorn mental_wellness.wsgi:application --bind 0.0.0.0:$PORT 
