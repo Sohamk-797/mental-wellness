@@ -3,7 +3,7 @@ services:
     name: mental-wellness
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn mental_wellness.wsgi:application --bind 0.0.0.0:$PORT
+    startCommand: gunicorn mental_wellness.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
@@ -12,4 +12,8 @@ services:
       - key: DJANGO_DEBUG
         value: false
       - key: WEB_CONCURRENCY
-        value: 4 
+        value: 4
+      - key: PORT
+        value: 10000
+    healthCheckPath: /
+    autoDeploy: true 
