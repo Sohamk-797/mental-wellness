@@ -1,0 +1,51 @@
+{% extends 'chatbot/base.html' %}
+{% load form_tags %}
+
+{% block title %}Update Progress - Mental Wellness{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-line me-2"></i>Update Progress
+            </div>
+            <div class="card-body">
+                <h5 class="card-title mb-4">
+                    {% if goal.goal_type == 'custom' %}
+                    {{ goal.custom_goal }}
+                    {% else %}
+                    {{ goal.get_goal_type_display }}
+                    {% endif %}
+                </h5>
+                <p class="text-muted mb-4">
+                    Target: {{ goal.target }}<br>
+                    Current Streak: {{ goal.streak_count }} days
+                </p>
+
+                <form method="post">
+                    {% csrf_token %}
+                    {% for field in form %}
+                    <div class="mb-3">
+                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                        {{ field.errors }}
+                        {{ field|add_class:"form-control" }}
+                        {% if field.help_text %}
+                        <small class="form-text text-muted">{{ field.help_text }}</small>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'wellness_goals' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Goals
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Save Progress
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
