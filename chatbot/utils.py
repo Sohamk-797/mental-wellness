@@ -18,7 +18,7 @@ def generate_chat_response(message, chat_history=None):
     """
     try:
         # Initialize OpenAI client
-        client = openai.Client(api_key=REMOVED)
+        openai.api_key = REMOVED
         
         # Prepare messages for the chat
         messages = [
@@ -33,7 +33,7 @@ def generate_chat_response(message, chat_history=None):
         messages.append({"role": "user", "content": message})
         
         # Generate response
-        response = client.chat.completions.create(
+        response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=messages,
             max_tokens=150,
