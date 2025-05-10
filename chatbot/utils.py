@@ -1,20 +1,10 @@
 import os
-from transformers import AutoModelForCausalLM, AutoTokenizer
-import torch
 from django.conf import settings
 from datetime import datetime
 from dotenv import load_dotenv
 from django.contrib.auth.models import User
 from chatbot.models import MoodEntry, JournalEntry, ChatMessage, SelfCareSuggestion
-
-# Initialize DialoGPT model and tokenizer
-try:
-    tokenizer = AutoTokenizer.from_pretrained("microsoft/DialoGPT-medium")
-    model = AutoModelForCausalLM.from_pretrained("microsoft/DialoGPT-medium")
-except Exception as e:
-    print(f"Error loading DialoGPT model: {str(e)}")
-    tokenizer = None
-    model = None
+import openai
 
 load_dotenv()
 
@@ -24,47 +14,44 @@ REMOVED = os.getenv('REMOVED')
 
 def generate_chat_response(message, chat_history=None):
     """
-    Generate a response using DialoGPT model.
+    Generate a response using OpenAI's GPT model.
     """
     try:
-        if model is None or tokenizer is None:
-            raise Exception("DialoGPT model not properly initialized")
-
-        # Encode the new user message
-        new_user_input_ids = tokenizer.encode(message + tokenizer.eos_token, return_tensors='pt')
+        # Initialize OpenAI client
+        client = openai.Client(api_key=REMOVED)
         
-        # If we have chat history, encode it
+        # Prepare messages for the chat
+        messages = [
+            {"role": "system", "content": "You are a supportive and empathetic mental wellness assistant. Your responses should be helpful, understanding, and focused on promoting mental well-being. Keep responses concise and natural."}
+        ]
+        
+        # Add chat history if available
         if chat_history:
-            chat_history_ids = tokenizer.encode(chat_history + tokenizer.eos_token, return_tensors='pt')
-            # Concatenate history with new message
-            input_ids = torch.cat([chat_history_ids, new_user_input_ids], dim=-1)
-        else:
-            input_ids = new_user_input_ids
-
-        # Generate response
-        chat_response_ids = model.generate(
-            input_ids,
-            max_length=1000,
-            pad_token_id=tokenizer.eos_token_id,
-            no_repeat_ngram_size=3,
-            do_sample=True,
-            top_k=100,
-            top_p=0.7,
-            temperature=0.8
-        )
-
-        # Decode the response
-        response = tokenizer.decode(chat_response_ids[:, input_ids.shape[-1]:][0], skip_special_tokens=True)
+            messages.append({"role": "user", "content": chat_history})
         
-        # Clean up the response
-        response = response.strip()
-        if not response:
+        # Add the current message
+        messages.append({"role": "user", "content": message})
+        
+        # Generate response
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            max_tokens=150,
+            temperature=0.7,
+            top_p=0.9,
+            frequency_penalty=0.5,
+            presence_penalty=0.5
+        )
+        
+        # Extract and return the response
+        ai_response = response.choices[0].message.content.strip()
+        if not ai_response:
             raise Exception("Empty response generated")
             
-        return response
+        return ai_response
             
     except Exception as e:
-        print(f"DialoGPT Error: {str(e)}")  # For debugging
+        print(f"OpenAI Error: {str(e)}")
         # Provide more natural fallback responses
         fallback_responses = [
             "I understand you're reaching out. Could you tell me more about what's on your mind?",

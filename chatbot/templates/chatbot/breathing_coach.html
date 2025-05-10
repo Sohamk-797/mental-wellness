@@ -27,6 +27,32 @@
                 </div>
             </div>
         </div>
+
+        <!-- Recent Sessions -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="fas fa-history me-2"></i>Recent Sessions
+            </div>
+            <div class="card-body">
+                {% if completed_sessions %}
+                    <div class="list-group">
+                        {% for session in completed_sessions %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ session.exercise.name }}</h6>
+                                    <small class="text-muted">{{ session.duration }} minutes</small>
+                                </div>
+                                <small class="text-muted">{{ session.completed_at|date:"M d, Y" }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center mb-0">No completed sessions yet</p>
+                {% endif %}
+            </div>
+        </div>
     </div>
 
     <!-- Breathing Animation -->
@@ -83,6 +109,7 @@ let currentCycle = 0;
 let totalCycles = 0;
 let animationInterval = null;
 let voiceGuide = null;
+let phaseTimeout = null;
 
 // Initialize speech synthesis
 if ('speechSynthesis' in window) {
@@ -115,7 +142,7 @@ function pauseExercise() {
     isPlaying = false;
     document.getElementById('startButton').style.display = 'inline-block';
     document.getElementById('pauseButton').style.display = 'none';
-    clearInterval(animationInterval);
+    clearTimeout(phaseTimeout);
     if (voiceGuide) {
         voiceGuide.cancel();
     }
@@ -126,70 +153,94 @@ function resetExercise() {
     currentCycle = 0;
     document.getElementById('currentCycle').textContent = '0';
     document.getElementById('cycleProgress').style.width = '0%';
-    document.getElementById('breathingCircle').style.transform = 'scale(1)';
-    document.getElementById('breathingText').textContent = 'Breathe';
+    document.querySelector('.breathing-circle').style.transform = 'scale(1)';
+    document.querySelector('.breathing-text').textContent = 'Breathe';
 }
 
 function startBreathingCycle() {
-    if (!isPlaying) return;
+    if (!isPlaying || !currentExercise) return;
 
-    const inhaleDuration = currentExercise.inhale_duration * 1000;
-    const holdDuration = currentExercise.hold_duration * 1000;
-    const exhaleDuration = currentExercise.exhale_duration * 1000;
-    const totalDuration = inhaleDuration + holdDuration + exhaleDuration;
+    const breathingCircle = document.querySelector('.breathing-circle');
+    const breathingText = document.querySelector('.breathing-text');
+    const cycleProgress = document.getElementById('cycleProgress');
+    const currentCycleElement = document.getElementById('currentCycle');
 
-    let startTime = Date.now();
-    let phase = 'inhale';
-
-    function updateAnimation() {
+    function updatePhase(phase, duration) {
         if (!isPlaying) return;
 
-        const elapsed = Date.now() - startTime;
-        const breathingCircle = document.querySelector('.breathing-circle');
-        const breathingText = document.querySelector('.breathing-text');
-
-        if (phase === 'inhale' && elapsed < inhaleDuration) {
-            const progress = elapsed / inhaleDuration;
-            breathingCircle.style.transform = `scale(${1 + progress})`;
-            breathingText.textContent = 'Breathe In';
-            if (voiceGuide && document.getElementById('voiceGuideToggle').checked) {
-                speak('Breathe in');
-            }
-        } else if (phase === 'hold' && elapsed < inhaleDuration + holdDuration) {
-            breathingCircle.style.transform = 'scale(2)';
-            breathingText.textContent = 'Hold';
-            if (voiceGuide && document.getElementById('voiceGuideToggle').checked) {
-                speak('Hold');
-            }
-        } else if (phase === 'exhale' && elapsed < totalDuration) {
-            const progress = (elapsed - inhaleDuration - holdDuration) / exhaleDuration;
-            breathingCircle.style.transform = `scale(${2 - progress})`;
-            breathingText.textContent = 'Breathe Out';
-            if (voiceGuide && document.getElementById('voiceGuideToggle').checked) {
-                speak('Breathe out');
-            }
-        } else {
-            // Cycle complete
-            currentCycle++;
-            document.getElementById('currentCycle').textContent = currentCycle;
-            document.getElementById('cycleProgress').style.width = `${(currentCycle / totalCycles) * 100}%`;
-
-            if (currentCycle >= totalCycles) {
-                pauseExercise();
+        switch (phase) {
+            case 'inhale':
+                breathingCircle.style.transform = 'scale(1)';
+                breathingText.textContent = 'Breathe In';
                 if (voiceGuide && document.getElementById('voiceGuideToggle').checked) {
-                    speak('Exercise complete. Great job!');
+                    speak('Breathe in');
                 }
-                return;
-            }
-
-            startTime = Date.now();
-            phase = 'inhale';
+                break;
+            case 'hold':
+                breathingCircle.style.transform = 'scale(2)';
+                breathingText.textContent = 'Hold';
+                if (voiceGuide && document.getElementById('voiceGuideToggle').checked) {
+                    speak('Hold');
+                }
+                break;
+            case 'exhale':
+                breathingCircle.style.transform = 'scale(1)';
+                breathingText.textContent = 'Breathe Out';
+                if (voiceGuide && document.getElementById('voiceGuideToggle').checked) {
+                    speak('Breathe out');
+                }
+                break;
         }
 
-        animationInterval = requestAnimationFrame(updateAnimation);
+        phaseTimeout = setTimeout(() => {
+            if (!isPlaying) return;
+
+            if (phase === 'exhale') {
+                currentCycle++;
+                currentCycleElement.textContent = currentCycle;
+                cycleProgress.style.width = `${(currentCycle / totalCycles) * 100}%`;
+
+                if (currentCycle >= totalCycles) {
+                    completeExercise();
+                    return;
+                }
+            }
+
+            const nextPhase = phase === 'inhale' ? 'hold' : 
+                            phase === 'hold' ? 'exhale' : 'inhale';
+            const nextDuration = nextPhase === 'inhale' ? currentExercise.inhale_duration * 1000 :
+                               nextPhase === 'hold' ? currentExercise.hold_duration * 1000 :
+                               currentExercise.exhale_duration * 1000;
+
+            updatePhase(nextPhase, nextDuration);
+        }, duration);
     }
 
-    updateAnimation();
+    updatePhase('inhale', currentExercise.inhale_duration * 1000);
+}
+
+function completeExercise() {
+    pauseExercise();
+    if (voiceGuide && document.getElementById('voiceGuideToggle').checked) {
+        speak('Exercise complete. Great job!');
+    }
+
+    // Record completion
+    fetch(`/complete-meditation/${currentExercise.id}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Reload the page to show updated session history
+            setTimeout(() => window.location.reload(), 2000);
+        }
+    })
+    .catch(error => console.error('Error:', error));
 }
 
 function speak(text) {
@@ -199,6 +250,22 @@ function speak(text) {
         utterance.pitch = 1;
         voiceGuide.speak(utterance);
     }
+}
+
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 </script>
 
@@ -218,7 +285,7 @@ function speak(text) {
     display: flex;
     justify-content: center;
     align-items: center;
-    transition: transform 0.1s ease-in-out;
+    transition: transform 1s ease-in-out;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 

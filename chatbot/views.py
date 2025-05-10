@@ -191,7 +191,14 @@ def complete_suggestion(request, suggestion_id):
 @login_required
 def breathing_coach(request):
     exercises = BreathingExercise.objects.all()
-    return render(request, 'chatbot/breathing_coach.html', {'exercises': exercises})
+    completed_sessions = MeditationSession.objects.filter(
+        user=request.user,
+        completed=True
+    ).order_by('-completed_at')[:5]
+    return render(request, 'chatbot/breathing_coach.html', {
+        'exercises': exercises,
+        'completed_sessions': completed_sessions
+    })
 
 @login_required
 @require_http_methods(['GET'])
@@ -214,18 +221,25 @@ def get_exercise(request, exercise_id):
 
 @login_required
 @require_http_methods(['POST'])
-@csrf_exempt
-def complete_meditation(request, session_id):
+def complete_meditation(request, exercise_id):
     try:
-        session = MeditationSession.objects.get(id=session_id, user=request.user)
-        session.completed = True
-        session.completed_at = timezone.now()
-        session.save()
-        return JsonResponse({'status': 'success'})
-    except MeditationSession.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': 'Session not found'}, status=404)
+        exercise = BreathingExercise.objects.get(id=exercise_id)
+        session = MeditationSession.objects.create(
+            user=request.user,
+            exercise=exercise,
+            duration=exercise.cycles * (exercise.inhale_duration + exercise.hold_duration + exercise.exhale_duration) // 60,
+            completed=True,
+            completed_at=timezone.now()
+        )
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Exercise completed successfully',
+            'session_id': session.id
+        })
+    except BreathingExercise.DoesNotExist:
+        return JsonResponse({'error': 'Exercise not found'}, status=404)
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        return JsonResponse({'error': str(e)}, status=500)
 
 def register(request):
     if request.method == 'POST':

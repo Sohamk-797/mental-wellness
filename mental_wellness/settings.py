@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import dj_database_url
 
 # Load environment variables from .env file
 load_dotenv()
@@ -14,7 +15,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-default-key-for-dev
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['mental-wellness.onrender.com', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['mental-wellness.onrender.com', 'localhost', '127.0.0.1', '.railway.app']
 
 # Security settings
 if not DEBUG:
@@ -38,11 +39,13 @@ INSTALLED_APPS = [
     'chatbot.apps.ChatbotConfig',
     'crispy_forms',
     'crispy_bootstrap5',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -73,10 +76,10 @@ WSGI_APPLICATION = 'mental_wellness.wsgi.application'
 
 # Database
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL', 'sqlite:///db.sqlite3'),
+        conn_max_age=600
+    )
 }
 
 # Password validation
@@ -125,3 +128,19 @@ LOGOUT_REDIRECT_URL = 'login'
 # Crispy Forms
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5" 
+
+# CORS settings
+CORS_ALLOWED_ORIGINS = [
+    "https://mentalwellness-production.up.railway.app",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+# Update CSRF settings
+CSRF_TRUSTED_ORIGINS = [
+    "https://mentalwellness-production.up.railway.app",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+] 
