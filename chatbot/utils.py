@@ -4,7 +4,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from django.contrib.auth.models import User
 from chatbot.models import MoodEntry, JournalEntry, ChatMessage, SelfCareSuggestion
-import openai
+from openai import OpenAI
 
 load_dotenv()
 
@@ -18,7 +18,7 @@ def generate_chat_response(message, chat_history=None):
     """
     try:
         # Initialize OpenAI client
-        openai.api_key = REMOVED
+        client = OpenAI(api_key=REMOVED)
         
         # Prepare messages for the chat
         messages = [
@@ -33,7 +33,7 @@ def generate_chat_response(message, chat_history=None):
         messages.append({"role": "user", "content": message})
         
         # Generate response
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=messages,
             max_tokens=150,
