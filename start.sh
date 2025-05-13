@@ -3,12 +3,20 @@
 set -o errexit
 
 # Install dependencies
+echo "Installing dependencies..."
 pip install -r requirements.txt
 
 # Apply database migrations
 echo "Running migrations..."
-python manage.py makemigrations
-python manage.py migrate --noinput
+python manage.py makemigrations auth
+python manage.py makemigrations sessions
+python manage.py makemigrations admin
+python manage.py makemigrations chatbot
+python manage.py migrate auth
+python manage.py migrate sessions
+python manage.py migrate admin
+python manage.py migrate chatbot
+python manage.py migrate
 
 # Load breathing exercises
 echo "Loading breathing exercises..."
@@ -33,4 +41,5 @@ exec gunicorn mental_wellness.wsgi:application \
     --threads 1 \
     --timeout 120 \
     --max-requests 1 \
-    --max-requests-jitter 0 
+    --max-requests-jitter 0 \
+    --log-level debug 

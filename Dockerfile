@@ -19,6 +19,7 @@ ENV HF_MODULES_CACHE=/tmp/huggingface/modules
 ENV PYTORCH_NO_CUDA=1
 ENV TRANSFORMERS_OFFLINE=1
 ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
+ENV DJANGO_SETTINGS_MODULE=mental_wellness.settings
 
 # Create cache directories
 RUN mkdir -p /tmp/transformers_cache /tmp/huggingface/datasets /tmp/huggingface/metrics /tmp/huggingface/modules
@@ -51,9 +52,10 @@ ENV HF_MODULES_CACHE=/tmp/huggingface/modules
 ENV PYTORCH_NO_CUDA=1
 ENV TRANSFORMERS_OFFLINE=1
 ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
+ENV DJANGO_SETTINGS_MODULE=mental_wellness.settings
 
-# Create cache directories
-RUN mkdir -p /tmp/transformers_cache /tmp/huggingface/datasets /tmp/huggingface/metrics /tmp/huggingface/modules
+# Create cache directories and database directory
+RUN mkdir -p /tmp/transformers_cache /tmp/huggingface/datasets /tmp/huggingface/metrics /tmp/huggingface/modules /app/data
 
 # Copy Python packages from builder
 COPY --from=builder /usr/local/lib/python3.11/site-packages/ /usr/local/lib/python3.11/site-packages/
