@@ -11,6 +11,14 @@ RUN apt-get update && apt-get install -y \
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
+ENV TRANSFORMERS_CACHE=/tmp/transformers_cache
+ENV HF_HOME=/tmp/huggingface
+ENV HF_DATASETS_CACHE=/tmp/huggingface/datasets
+ENV HF_METRICS_CACHE=/tmp/huggingface/metrics
+ENV HF_MODULES_CACHE=/tmp/huggingface/modules
+
+# Create cache directories
+RUN mkdir -p /tmp/transformers_cache /tmp/huggingface/datasets /tmp/huggingface/metrics /tmp/huggingface/modules
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
@@ -32,6 +40,14 @@ RUN apt-get update && apt-get install -y \
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
+ENV TRANSFORMERS_CACHE=/tmp/transformers_cache
+ENV HF_HOME=/tmp/huggingface
+ENV HF_DATASETS_CACHE=/tmp/huggingface/datasets
+ENV HF_METRICS_CACHE=/tmp/huggingface/metrics
+ENV HF_MODULES_CACHE=/tmp/huggingface/modules
+
+# Create cache directories
+RUN mkdir -p /tmp/transformers_cache /tmp/huggingface/datasets /tmp/huggingface/metrics /tmp/huggingface/modules
 
 # Copy Python packages from builder
 COPY --from=builder /usr/local/lib/python3.11/site-packages/ /usr/local/lib/python3.11/site-packages/
@@ -51,8 +67,8 @@ exec gunicorn mental_wellness.wsgi:application \
     --workers 1 \
     --threads 2 \
     --timeout 120 \
-    --max-requests 1000 \
-    --max-requests-jitter 50' > /app/start.sh && \
+    --max-requests 1 \
+    --max-requests-jitter 0' > /app/start.sh && \
     chmod +x /app/start.sh
 
 # Use the startup script

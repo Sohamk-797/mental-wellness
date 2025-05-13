@@ -1,5 +1,5 @@
 [deploy]
-startCommand = "gunicorn mental_wellness.wsgi:application --bind 0.0.0.0:8000 --workers 1 --timeout 300 --max-requests 1 --max-requests-jitter 0"
+startCommand = "gunicorn mental_wellness.wsgi:application"
 healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
@@ -9,4 +9,9 @@ restartPolicyMaxRetries = 10
 PYTHON_VERSION = "3.11.11"
 DJANGO_DEBUG = "False"
 WEB_CONCURRENCY = "1"
-PYTORCH_CUDA_ALLOC_CONF = "max_split_size_mb:512" 
+PYTORCH_CUDA_ALLOC_CONF = "max_split_size_mb:512"
+TRANSFORMERS_CACHE = "/tmp/transformers_cache"
+HF_HOME = "/tmp/huggingface"
+HF_DATASETS_CACHE = "/tmp/huggingface/datasets"
+HF_METRICS_CACHE = "/tmp/huggingface/metrics"
+HF_MODULES_CACHE = "/tmp/huggingface/modules" 
