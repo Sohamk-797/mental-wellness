@@ -16,6 +16,9 @@ ENV HF_HOME=/tmp/huggingface
 ENV HF_DATASETS_CACHE=/tmp/huggingface/datasets
 ENV HF_METRICS_CACHE=/tmp/huggingface/metrics
 ENV HF_MODULES_CACHE=/tmp/huggingface/modules
+ENV PYTORCH_NO_CUDA=1
+ENV TRANSFORMERS_OFFLINE=1
+ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
 
 # Create cache directories
 RUN mkdir -p /tmp/transformers_cache /tmp/huggingface/datasets /tmp/huggingface/metrics /tmp/huggingface/modules
@@ -45,6 +48,9 @@ ENV HF_HOME=/tmp/huggingface
 ENV HF_DATASETS_CACHE=/tmp/huggingface/datasets
 ENV HF_METRICS_CACHE=/tmp/huggingface/metrics
 ENV HF_MODULES_CACHE=/tmp/huggingface/modules
+ENV PYTORCH_NO_CUDA=1
+ENV TRANSFORMERS_OFFLINE=1
+ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
 
 # Create cache directories
 RUN mkdir -p /tmp/transformers_cache /tmp/huggingface/datasets /tmp/huggingface/metrics /tmp/huggingface/modules
@@ -65,7 +71,7 @@ DJANGO_SUPERUSER_USERNAME=admin2 DJANGO_SUPERUSER_EMAIL=admin2@example.com DJANG
 exec gunicorn mental_wellness.wsgi:application \
     --bind 0.0.0.0:8000 \
     --workers 1 \
-    --threads 2 \
+    --threads 1 \
     --timeout 120 \
     --max-requests 1 \
     --max-requests-jitter 0' > /app/start.sh && \
