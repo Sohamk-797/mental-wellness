@@ -33,7 +33,7 @@ A Django-based mental wellness chatbot application that provides support and gui
 
 4. Create a `.env` file in the project root and add your OpenAI API key:
    ```
-   REMOVED=your_api_key_here
+   OPENAI_API_KEY=your_api_key_here
    ```
 
 5. Run migrations:

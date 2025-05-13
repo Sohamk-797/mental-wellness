@@ -40,12 +40,24 @@ class ChatMessage(models.Model):
     message = models.TextField()
     is_user = models.BooleanField(default=True)
     created_at = models.DateTimeField(default=timezone.now)
+    is_error = models.BooleanField(default=False)
+    error_message = models.TextField(blank=True, null=True)
+    response_time = models.FloatField(null=True, blank=True)  # Store response time in seconds
 
     class Meta:
         ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['user', 'created_at']),
+            models.Index(fields=['is_user']),
+        ]
 
     def __str__(self):
         return f"Chat with {self.user.username} on {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+
+    @classmethod
+    def get_recent_chat_history(cls, user, limit=5):
+        """Get recent chat history for a user"""
+        return cls.objects.filter(user=user).order_by('-created_at')[:limit]
 
 class SelfCareSuggestion(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

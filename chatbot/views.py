@@ -12,6 +12,10 @@ from .forms import MoodEntryForm, JournalEntryForm, UserRegistrationForm, Wellne
 from .utils import generate_chat_response, get_mood_insights, generate_self_care_suggestions
 from collections import Counter
 from datetime import datetime, timedelta, timezone
+import logging
+import time
+
+logger = logging.getLogger(__name__)
 
 @login_required
 def home(request):
@@ -117,17 +121,19 @@ def add_journal(request):
 @login_required
 @require_http_methods(["POST"])
 def chat(request):
+    start_time = time.time()
     try:
         data = json.loads(request.body)
         user_message = data.get('message', '').strip()
         
         if not user_message:
-            return JsonResponse({'error': 'Message cannot be empty'}, status=400)
+            return JsonResponse({
+                'error': 'Message cannot be empty',
+                'status': 'error'
+            }, status=400)
         
-        # Get recent chat history (last 5 messages)
-        recent_messages = ChatMessage.objects.filter(
-            user=request.user
-        ).order_by('-created_at')[:5]
+        # Get recent chat history using the new method
+        recent_messages = ChatMessage.get_recent_chat_history(request.user)
         
         # Build chat history string
         chat_history = ""
@@ -136,28 +142,62 @@ def chat(request):
             chat_history += f"{prefix}{msg.message}\n"
         
         # Save user message
-        ChatMessage.objects.create(
+        user_chat = ChatMessage.objects.create(
             user=request.user,
             message=user_message,
             is_user=True
         )
         
-        # Generate AI response with chat history
-        ai_response = generate_chat_response(user_message, chat_history)
-        
-        # Save AI response
-        ChatMessage.objects.create(
-            user=request.user,
-            message=ai_response,
-            is_user=False
-        )
-        
-        return JsonResponse({'response': ai_response})
+        try:
+            # Generate AI response with chat history
+            ai_response = generate_chat_response(user_message, chat_history)
+            
+            # Calculate response time
+            response_time = time.time() - start_time
+            
+            # Save AI response
+            ChatMessage.objects.create(
+                user=request.user,
+                message=ai_response,
+                is_user=False,
+                response_time=response_time
+            )
+            
+            return JsonResponse({
+                'response': ai_response,
+                'status': 'success',
+                'response_time': round(response_time, 2)
+            })
+            
+        except Exception as e:
+            logger.error(f"Error generating chat response: {str(e)}")
+            # Save error message
+            ChatMessage.objects.create(
+                user=request.user,
+                message="I apologize, but I'm having trouble responding right now.",
+                is_user=False,
+                is_error=True,
+                error_message=str(e),
+                response_time=time.time() - start_time
+            )
+            
+            return JsonResponse({
+                'error': 'An error occurred while generating the response',
+                'status': 'error'
+            }, status=500)
         
     except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        logger.error("Invalid JSON in chat request")
+        return JsonResponse({
+            'error': 'Invalid JSON',
+            'status': 'error'
+        }, status=400)
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        logger.error(f"Unexpected error in chat: {str(e)}")
+        return JsonResponse({
+            'error': 'An unexpected error occurred',
+            'status': 'error'
+        }, status=500)
 
 @login_required(login_url='login')
 def mood_history(request):

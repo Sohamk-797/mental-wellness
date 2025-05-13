@@ -17,7 +17,7 @@
         <form id="chatForm" onsubmit="sendMessage(event)">
             <div class="input-group">
                 <input type="text" id="messageInput" class="form-control" placeholder="Type your message..." required>
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn-primary" id="sendButton">
                     <i class="bi bi-send"></i>
                 </button>
             </div>
@@ -68,6 +68,12 @@
     padding: 10px 15px;
     border-radius: 15px;
     margin-bottom: 10px;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .user-message {
@@ -99,6 +105,12 @@
 .chat-input button {
     border-radius: 20px;
     padding: 10px 20px;
+    transition: all 0.3s ease;
+}
+
+.chat-input button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
 }
 
 #chatMessages::-webkit-scrollbar {
@@ -117,6 +129,48 @@
 #chatMessages::-webkit-scrollbar-thumb:hover {
     background: #555;
 }
+
+.message.error {
+    background-color: #fff3f3;
+    border: 1px solid #ffcdd2;
+    color: #d32f2f;
+}
+
+.message.error .message-content {
+    color: #d32f2f;
+}
+
+#messageInput:disabled {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+}
+
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 15px;
+    background-color: #f0f0f0;
+    border-radius: 15px;
+    width: fit-content;
+    margin-bottom: 10px;
+}
+
+.typing-indicator span {
+    width: 8px;
+    height: 8px;
+    background-color: #6c5ce7;
+    border-radius: 50%;
+    animation: typing 1s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
 </style>
 
 <script>
@@ -133,15 +187,47 @@ function addMessage(message, isUser = false) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+function showTypingIndicator() {
+    const chatMessages = document.getElementById('chatMessages');
+    const indicator = document.createElement('div');
+    indicator.className = 'typing-indicator';
+    indicator.innerHTML = '<span></span><span></span><span></span>';
+    indicator.id = 'typingIndicator';
+    chatMessages.appendChild(indicator);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function removeTypingIndicator() {
+    const indicator = document.getElementById('typingIndicator');
+    if (indicator) {
+        indicator.remove();
+    }
+}
+
+function showError(message) {
+    const chatMessages = document.getElementById('chatMessages');
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'message ai-message error';
+    errorDiv.innerHTML = `<div class="message-content">${message}</div>`;
+    chatMessages.appendChild(errorDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
 function sendMessage(event) {
     event.preventDefault();
     const input = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
     const message = input.value.trim();
     
     if (message) {
         // Add user message to chat
         addMessage(message, true);
         input.value = '';
+        
+        // Disable input and show typing indicator
+        input.disabled = true;
+        sendButton.disabled = true;
+        showTypingIndicator();
         
         // Send message to server
         fetch('/chat/', {
@@ -154,12 +240,29 @@ function sendMessage(event) {
         })
         .then(response => response.json())
         .then(data => {
-            // Add AI response to chat
-            addMessage(data.response);
+            removeTypingIndicator();
+            if (data.status === 'success') {
+                // Add AI response to chat
+                addMessage(data.response);
+                // Log response time if available
+                if (data.response_time) {
+                    console.log(`Response time: ${data.response_time}s`);
+                }
+            } else {
+                // Show error message
+                showError(data.error || 'An error occurred while processing your message');
+            }
         })
         .catch(error => {
             console.error('Error:', error);
-            addMessage('I apologize, but I\'m having trouble responding right now. Please try again.');
+            removeTypingIndicator();
+            showError('I apologize, but I\'m having trouble responding right now. Please try again.');
+        })
+        .finally(() => {
+            // Re-enable input
+            input.disabled = false;
+            sendButton.disabled = false;
+            input.focus();
         });
     }
 }

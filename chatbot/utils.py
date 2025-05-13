@@ -4,64 +4,108 @@ from datetime import datetime
 from dotenv import load_dotenv
 from django.contrib.auth.models import User
 from chatbot.models import MoodEntry, JournalEntry, ChatMessage, SelfCareSuggestion
-from openai import OpenAI
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+import logging
 
 load_dotenv()
 
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
-REMOVED = os.getenv('REMOVED')
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Initialize the model and tokenizer
+try:
+    model_name = "microsoft/DialoGPT-small"  # Using the smallest DialoGPT model
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(model_name)
+    logger.info("Successfully loaded DialoGPT model and tokenizer")
+except Exception as e:
+    logger.error(f"Error loading DialoGPT model: {str(e)}")
+    model = None
+    tokenizer = None
+
+def format_chat_history(chat_history):
+    """
+    Format chat history into a string for the model.
+    """
+    if not chat_history:
+        return ""
+    
+    formatted_history = []
+    for msg in chat_history.split('\n'):
+        if msg.strip():
+            formatted_history.append(msg.strip())
+    return '\n'.join(formatted_history)
 
 def generate_chat_response(message, chat_history=None):
     """
-    Generate a response using OpenAI's GPT model.
+    Generate a response using DialoGPT-small model.
     """
+    if model is None or tokenizer is None:
+        logger.error("Model or tokenizer not initialized")
+        return get_fallback_response()
+    
     try:
-        # Initialize OpenAI client
-        client = OpenAI(api_key=REMOVED)
-        
-        # Prepare messages for the chat
-        messages = [
-            {"role": "system", "content": "You are a supportive and empathetic mental wellness assistant. Your responses should be helpful, understanding, and focused on promoting mental well-being. Keep responses concise and natural."}
-        ]
-        
-        # Add chat history if available
+        # Prepare the input text
         if chat_history:
-            messages.append({"role": "user", "content": chat_history})
+            formatted_history = format_chat_history(chat_history)
+            input_text = f"{formatted_history}\nUser: {message}"
+        else:
+            input_text = f"User: {message}"
         
-        # Add the current message
-        messages.append({"role": "user", "content": message})
+        # Encode the input text
+        input_ids = tokenizer.encode(input_text + tokenizer.eos_token, return_tensors='pt')
         
         # Generate response
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=messages,
-            max_tokens=150,
-            temperature=0.7,
-            top_p=0.9,
-            frequency_penalty=0.5,
-            presence_penalty=0.5
+        response_ids = model.generate(
+            input_ids,
+            max_length=1000,
+            pad_token_id=tokenizer.eos_token_id,
+            no_repeat_ngram_size=3,
+            do_sample=True,
+            top_k=100,
+            top_p=0.7,
+            temperature=0.8,
+            num_return_sequences=1,
+            length_penalty=1.0,
+            repetition_penalty=1.2
         )
         
-        # Extract and return the response
-        ai_response = response.choices[0].message.content.strip()
+        # Decode the response
+        ai_response = tokenizer.decode(response_ids[:, input_ids.shape[-1]:][0], skip_special_tokens=True)
+        
         if not ai_response:
-            raise Exception("Empty response generated")
+            logger.warning("Empty response generated")
+            return get_fallback_response()
+        
+        # Clean up the response
+        ai_response = ai_response.strip()
+        if ai_response.startswith("Assistant:"):
+            ai_response = ai_response[10:].strip()
             
         return ai_response
             
     except Exception as e:
-        print(f"OpenAI Error: {str(e)}")
-        # Provide more natural fallback responses
-        fallback_responses = [
-            "I understand you're reaching out. Could you tell me more about what's on your mind?",
-            "I'm here to chat. What would you like to talk about?",
-            "I'm listening. Feel free to share your thoughts or feelings.",
-            "I'm here to support you. What's been going on lately?",
-            "I'd love to hear more about what you're experiencing. Would you like to share?"
-        ]
-        import random
-        return random.choice(fallback_responses)
+        logger.error(f"DialoGPT Error: {str(e)}")
+        return get_fallback_response()
+
+def get_fallback_response():
+    """
+    Get a fallback response when the model fails or generates an empty response.
+    """
+    fallback_responses = [
+        "I understand you're reaching out. Could you tell me more about what's on your mind?",
+        "I'm here to chat. What would you like to talk about?",
+        "I'm listening. Feel free to share your thoughts or feelings.",
+        "I'm here to support you. What's been going on lately?",
+        "I'd love to hear more about what you're experiencing. Would you like to share?"
+    ]
+    import random
+    return random.choice(fallback_responses)
 
 def get_mood_insights(mood_entries):
     """
