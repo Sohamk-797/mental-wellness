@@ -17,12 +17,9 @@ python manage.py load_breathing_exercises
 # Create superuser
 DJANGO_SUPERUSER_USERNAME=admin2 DJANGO_SUPERUSER_EMAIL=admin2@example.com DJANGO_SUPERUSER_PASSWORD=Admin@123 python manage.py createsuperuser --noinput
 
-# Set default port if not provided
-PORT=${PORT:-8000}
-
 # Start gunicorn with the correct WSGI application
 exec gunicorn mental_wellness.wsgi:application \
-    --bind 0.0.0.0:$PORT \
+    --bind 0.0.0.0:8000 \
     --workers 1 \
     --threads 2 \
     --timeout 120 \
