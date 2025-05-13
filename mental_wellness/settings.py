@@ -15,7 +15,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-default-key-for-dev
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['mental-wellness.onrender.com', 'localhost', '127.0.0.1', '.railway.app']
+ALLOWED_HOSTS = ['*']  # Allow all hosts for now, we'll restrict it later
 
 # Security settings
 if not DEBUG:
@@ -131,7 +131,7 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
-    "https://mentalwellness-production.up.railway.app",
+    "https://*.railway.app",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
 ]
@@ -140,7 +140,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 # Update CSRF settings
 CSRF_TRUSTED_ORIGINS = [
-    "https://mentalwellness-production.up.railway.app",
+    "https://*.railway.app",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
 ] 
