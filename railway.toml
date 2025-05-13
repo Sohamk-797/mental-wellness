@@ -1,5 +1,5 @@
 [deploy]
-startCommand = "gunicorn mental_wellness.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 300 --max-requests 1 --max-requests-jitter 0"
+startCommand = "gunicorn mental_wellness.wsgi:application --bind 0.0.0.0:8000 --workers 1 --timeout 300 --max-requests 1 --max-requests-jitter 0"
 healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

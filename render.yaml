@@ -2,7 +2,7 @@ services:
   - type: web
     name: mental-wellness
     env: python
-    startCommand: gunicorn mental_wellness.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
+    startCommand: gunicorn mental_wellness.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.11
@@ -12,7 +12,5 @@ services:
         value: false
       - key: WEB_CONCURRENCY
         value: 4
-      - key: PORT
-        value: 10000
     healthCheckPath: /
     autoDeploy: true 
