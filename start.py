@@ -18,14 +18,11 @@ def main():
     os.environ['DJANGO_SUPERUSER_PASSWORD'] = 'Admin@123'
     subprocess.run([sys.executable, 'manage.py', 'createsuperuser', '--noinput'], check=True)
     
-    # Get port from environment variable or use default
-    port = os.getenv('PORT', '8000')
-    
     # Start Gunicorn
     gunicorn_cmd = [
         'gunicorn',
         'mental_wellness.wsgi:application',
-        f'--bind=0.0.0.0:{port}',
+        '--bind=0.0.0.0:8000',
         '--workers=1',
         '--threads=2',
         '--timeout=120',
