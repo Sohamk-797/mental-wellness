@@ -61,16 +61,8 @@ RUN mkdir -p /tmp/transformers_cache /tmp/huggingface/datasets /tmp/huggingface/
 COPY --from=builder /usr/local/lib/python3.11/site-packages/ /usr/local/lib/python3.11/site-packages/
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
-# Copy application code
+# Copy application code and model files
 COPY . .
-
-# Download model files
-RUN python -c "from transformers import AutoModelForCausalLM, AutoTokenizer; \
-    model_name = 'microsoft/DialoGPT-small'; \
-    tokenizer = AutoTokenizer.from_pretrained(model_name); \
-    model = AutoModelForCausalLM.from_pretrained(model_name); \
-    tokenizer.save_pretrained('/app/models/dialoGPT-small'); \
-    model.save_pretrained('/app/models/dialoGPT-small')"
 
 # Make start.sh executable
 RUN chmod +x /app/start.sh
