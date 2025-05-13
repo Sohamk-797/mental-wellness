@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # exit on error
 set -o errexit
 
@@ -15,10 +15,7 @@ python manage.py migrate
 python manage.py load_breathing_exercises
 
 # Create superuser
-export DJANGO_SUPERUSER_USERNAME=admin2
-export DJANGO_SUPERUSER_EMAIL=admin2@example.com
-export DJANGO_SUPERUSER_PASSWORD=Admin@123
-python manage.py createsuperuser --noinput
+DJANGO_SUPERUSER_USERNAME=admin2 DJANGO_SUPERUSER_EMAIL=admin2@example.com DJANGO_SUPERUSER_PASSWORD=Admin@123 python manage.py createsuperuser --noinput
 
 # Set default port if not provided
 PORT=${PORT:-8000}
