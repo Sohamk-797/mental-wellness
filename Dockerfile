@@ -62,20 +62,8 @@ COPY --from=builder /usr/local/bin/ /usr/local/bin/
 # Copy application code
 COPY . .
 
-# Create startup script
-RUN echo '#!/bin/bash\n\
-python manage.py migrate\n\
-python manage.py load_breathing_exercises\n\
-python manage.py collectstatic --noinput\n\
-DJANGO_SUPERUSER_USERNAME=admin2 DJANGO_SUPERUSER_EMAIL=admin2@example.com DJANGO_SUPERUSER_PASSWORD=Admin@123 python manage.py createsuperuser --noinput\n\
-exec gunicorn mental_wellness.wsgi:application \
-    --bind 0.0.0.0:8000 \
-    --workers 1 \
-    --threads 1 \
-    --timeout 120 \
-    --max-requests 1 \
-    --max-requests-jitter 0' > /app/start.sh && \
-    chmod +x /app/start.sh
+# Make start.sh executable
+RUN chmod +x /app/start.sh
 
 # Use the startup script
 CMD ["/app/start.sh"] 
