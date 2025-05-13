@@ -1,1 +1,1 @@
-web: gunicorn mental_wellness.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 300 
+web: bash start.sh 
