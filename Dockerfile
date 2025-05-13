@@ -55,7 +55,7 @@ ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
 ENV DJANGO_SETTINGS_MODULE=mental_wellness.settings
 
 # Create cache directories and database directory
-RUN mkdir -p /tmp/transformers_cache /tmp/huggingface/datasets /tmp/huggingface/metrics /tmp/huggingface/modules /app/data
+RUN mkdir -p /tmp/transformers_cache /tmp/huggingface/datasets /tmp/huggingface/metrics /tmp/huggingface/modules /app/data /app/models/dialoGPT-small
 
 # Copy Python packages from builder
 COPY --from=builder /usr/local/lib/python3.11/site-packages/ /usr/local/lib/python3.11/site-packages/
@@ -63,6 +63,14 @@ COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
 # Copy application code
 COPY . .
+
+# Download model files
+RUN python -c "from transformers import AutoModelForCausalLM, AutoTokenizer; \
+    model_name = 'microsoft/DialoGPT-small'; \
+    tokenizer = AutoTokenizer.from_pretrained(model_name); \
+    model = AutoModelForCausalLM.from_pretrained(model_name); \
+    tokenizer.save_pretrained('/app/models/dialoGPT-small'); \
+    model.save_pretrained('/app/models/dialoGPT-small')"
 
 # Make start.sh executable
 RUN chmod +x /app/start.sh

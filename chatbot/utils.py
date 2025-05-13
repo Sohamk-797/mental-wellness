@@ -17,16 +17,37 @@ DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize the model and tokenizer
-try:
-    model_name = "microsoft/DialoGPT-small"  # Using the smallest DialoGPT model
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name)
-    logger.info("Successfully loaded DialoGPT model and tokenizer")
-except Exception as e:
-    logger.error(f"Error loading DialoGPT model: {str(e)}")
-    model = None
-    tokenizer = None
+# Initialize model and tokenizer as None
+model = None
+tokenizer = None
+
+def load_model():
+    """Load the DialoGPT model and tokenizer."""
+    global model, tokenizer
+    
+    try:
+        # Set environment variables for offline mode
+        os.environ['TRANSFORMERS_OFFLINE'] = '1'
+        os.environ['HF_DATASETS_OFFLINE'] = '1'
+        
+        # Define model paths
+        model_path = os.path.join(settings.BASE_DIR, 'models', 'dialoGPT-small')
+        config_path = os.path.join(model_path, 'config.json')
+        
+        # Check if model files exist
+        if not os.path.exists(config_path):
+            logger.warning(f"Model files not found at {model_path}. Using fallback responses.")
+            return False
+            
+        # Load model and tokenizer from local path
+        tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
+        model = AutoModelForCausalLM.from_pretrained(model_path, local_files_only=True)
+        logger.info("Successfully loaded DialoGPT model from local files")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error loading DialoGPT model: {str(e)}")
+        return False
 
 def format_chat_history(chat_history):
     """
@@ -41,26 +62,28 @@ def format_chat_history(chat_history):
             formatted_history.append(msg.strip())
     return '\n'.join(formatted_history)
 
-def generate_chat_response(message, chat_history=None):
-    """
-    Generate a response using DialoGPT-small model.
-    """
-    if model is None or tokenizer is None:
-        logger.error("Model or tokenizer not initialized")
-        return get_fallback_response()
+def get_response(user_input):
+    """Get a response from the model or fallback to predefined responses."""
+    global model, tokenizer
+    
+    # Fallback responses if model fails to load
+    fallback_responses = [
+        "I understand you're feeling down. Would you like to talk about what's bothering you?",
+        "It's okay to feel this way. Remember, you're not alone in this journey.",
+        "I'm here to listen. Would you like to try some breathing exercises?",
+        "Let's take a moment to breathe together. Would that help?",
+        "I'm sorry you're feeling this way. Would you like to explore some coping strategies?"
+    ]
     
     try:
-        # Prepare the input text
-        if chat_history:
-            formatted_history = format_chat_history(chat_history)
-            input_text = f"{formatted_history}\nUser: {message}"
-        else:
-            input_text = f"User: {message}"
+        if model is None or tokenizer is None:
+            if not load_model():
+                # Return a random fallback response if model loading fails
+                import random
+                return random.choice(fallback_responses)
         
-        # Encode the input text
-        input_ids = tokenizer.encode(input_text + tokenizer.eos_token, return_tensors='pt')
-        
-        # Generate response
+        # Encode the input and generate response
+        input_ids = tokenizer.encode(user_input + tokenizer.eos_token, return_tensors='pt')
         response_ids = model.generate(
             input_ids,
             max_length=1000,
@@ -69,43 +92,16 @@ def generate_chat_response(message, chat_history=None):
             do_sample=True,
             top_k=100,
             top_p=0.7,
-            temperature=0.8,
-            num_return_sequences=1,
-            length_penalty=1.0,
-            repetition_penalty=1.2
+            temperature=0.8
         )
         
-        # Decode the response
-        ai_response = tokenizer.decode(response_ids[:, input_ids.shape[-1]:][0], skip_special_tokens=True)
+        # Decode and return the response
+        response = tokenizer.decode(response_ids[:, input_ids.shape[-1]:][0], skip_special_tokens=True)
+        return response if response.strip() else random.choice(fallback_responses)
         
-        if not ai_response:
-            logger.warning("Empty response generated")
-            return get_fallback_response()
-        
-        # Clean up the response
-        ai_response = ai_response.strip()
-        if ai_response.startswith("Assistant:"):
-            ai_response = ai_response[10:].strip()
-            
-        return ai_response
-            
     except Exception as e:
-        logger.error(f"DialoGPT Error: {str(e)}")
-        return get_fallback_response()
-
-def get_fallback_response():
-    """
-    Get a fallback response when the model fails or generates an empty response.
-    """
-    fallback_responses = [
-        "I understand you're reaching out. Could you tell me more about what's on your mind?",
-        "I'm here to chat. What would you like to talk about?",
-        "I'm listening. Feel free to share your thoughts or feelings.",
-        "I'm here to support you. What's been going on lately?",
-        "I'd love to hear more about what you're experiencing. Would you like to share?"
-    ]
-    import random
-    return random.choice(fallback_responses)
+        logger.error(f"Error generating response: {str(e)}")
+        return random.choice(fallback_responses)
 
 def get_mood_insights(mood_entries):
     """
@@ -148,7 +144,7 @@ def get_mood_insights(mood_entries):
         3. Suggesting coping strategies
         4. Maintaining an encouraging tone"""
         
-        response = generate_chat_response(prompt)
+        response = get_response(prompt)
         return response if response else "I notice you've been tracking your moods. That's a great step towards self-awareness. Would you like to share more about how you're feeling today?"
         
     except Exception as e:
@@ -238,7 +234,7 @@ def generate_self_care_suggestions(user, mood_entries=None, journal_entries=None
         Example: relaxation|Take a warm bath with lavender essential oils|20 minutes
         """
 
-        response = generate_chat_response(prompt)
+        response = get_response(prompt)
         if not response:
             return []
 
