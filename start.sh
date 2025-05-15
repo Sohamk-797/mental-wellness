@@ -3,6 +3,14 @@ set -x
 # exit on error
 set -o errexit
 
+# Print Python version and environment
+echo "Python version:"
+python --version
+echo "Python path:"
+python -c "import sys; print('\n'.join(sys.path))"
+echo "Environment variables:"
+env
+
 # Install dependencies
 echo "Installing dependencies..."
 pip install -r requirements.txt
@@ -38,8 +46,8 @@ python manage.py createsuperuser --noinput || true
 echo "Starting gunicorn..."
 exec gunicorn mental_wellness.wsgi:application \
     --bind 0.0.0.0:8000 \
-    --workers 1 \
-    --threads 1 \
+    --workers 2 \
+    --threads 2 \
     --timeout 120 \
     --max-requests 1 \
     --max-requests-jitter 0 \
