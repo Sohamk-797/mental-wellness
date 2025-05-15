@@ -1,0 +1,8 @@
+models/dialoGPT-small/*
+!models/dialoGPT-small/config.json
+!models/dialoGPT-small/generation_config.json
+!models/dialoGPT-small/special_tokens_map.json
+!models/dialoGPT-small/tokenizer_config.json
+!models/dialoGPT-small/tokenizer.json
+!models/dialoGPT-small/vocab.json
+ 
