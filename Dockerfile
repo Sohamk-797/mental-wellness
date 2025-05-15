@@ -28,8 +28,7 @@ RUN mkdir -p /tmp/transformers_cache /tmp/huggingface/datasets /tmp/huggingface/
 COPY requirements.txt .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Final stage
 FROM python:3.11-slim
